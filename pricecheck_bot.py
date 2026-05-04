@@ -6,11 +6,12 @@ Read  → API key (no auth needed for public sheet)
 Write → Google Service Account (JSON stored in GOOGLE_CREDENTIALS_JSON env var)
 
 Setup:
-  1. pip install "discord.py>=2.3" aiohttp google-auth
+  1. pip install "discord.py>=2.3" aiohttp google-auth requests
   2. Set environment variables:
        DISCORD_TOKEN              — your Discord bot token
        GOOGLE_API_KEY             — your Google API key (for reads)
        GOOGLE_CREDENTIALS_JSON    — full contents of your service account JSON (for writes)
+       HOME_GUILD_ID              — your Discord server ID (restricts /pricecheckadd to this server)
   3. Run: python pricecheck_bot.py
 
 Slash commands:
@@ -20,6 +21,7 @@ Slash commands:
 
 import os
 import json
+import asyncio
 import aiohttp
 import discord
 from discord import app_commands
@@ -43,13 +45,25 @@ def get_service_account_token() -> str:
     """
     Loads the service account credentials from the env var and returns
     a fresh OAuth2 access token for the Sheets API.
+    Raises clear errors if credentials are missing or malformed.
     """
-    creds_info = json.loads(GOOGLE_CREDENTIALS_JSON)
-    creds = service_account.Credentials.from_service_account_info(
-        creds_info,
-        scopes=["https://www.googleapis.com/auth/spreadsheets"]
-    )
-    creds.refresh(Request())
+    if not GOOGLE_CREDENTIALS_JSON:
+        raise ValueError("GOOGLE_CREDENTIALS_JSON environment variable is not set.")
+
+    try:
+        creds_info = json.loads(GOOGLE_CREDENTIALS_JSON)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"GOOGLE_CREDENTIALS_JSON is not valid JSON: {e}")
+
+    try:
+        creds = service_account.Credentials.from_service_account_info(
+            creds_info,
+            scopes=["https://www.googleapis.com/auth/spreadsheets"]
+        )
+        creds.refresh(Request())
+    except Exception as e:
+        raise ValueError(f"Failed to authenticate with Google service account: {e}")
+
     return creds.token
 
 
@@ -65,6 +79,12 @@ async def fetch_sheet_data() -> list[list[str]]:
     )
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as resp:
+            if resp.status == 400:
+                raise ValueError("Bad request — check that the SPREADSHEET_ID and sheet range are correct.")
+            if resp.status == 403:
+                raise PermissionError("Access denied — make sure the sheet is shared publicly (viewer access).")
+            if resp.status == 404:
+                raise ValueError("Spreadsheet not found — check the SPREADSHEET_ID in the config.")
             resp.raise_for_status()
             data = await resp.json()
     return data.get("values", [])
@@ -73,8 +93,14 @@ async def fetch_sheet_data() -> list[list[str]]:
 async def append_row_to_sheet(item: str, price: str, note: str) -> None:
     """
     Appends a new row to the sheet via Google Sheets API v4 (write, service account).
+    Raises clear errors for common failure cases.
     """
-    token = get_service_account_token()
+    # get_service_account_token is blocking — run it in a thread to avoid blocking the event loop
+    try:
+        token = await asyncio.to_thread(get_service_account_token)
+    except ValueError as e:
+        raise ValueError(str(e))
+
     url = (
         f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}"
         f"/values/{SHEET_APPEND}:append"
@@ -89,6 +115,15 @@ async def append_row_to_sheet(item: str, price: str, note: str) -> None:
             json=payload,
             headers={"Authorization": f"Bearer {token}"}
         ) as resp:
+            if resp.status == 403:
+                raise PermissionError(
+                    "The service account does not have Editor access to the sheet. "
+                    "Check that the sheet is shared with the service account email."
+                )
+            if resp.status == 404:
+                raise ValueError("Spreadsheet not found — check the SPREADSHEET_ID in the config.")
+            if resp.status == 401:
+                raise PermissionError("Google authentication failed — check your GOOGLE_CREDENTIALS_JSON.")
             resp.raise_for_status()
 
 
@@ -135,6 +170,12 @@ async def pricecheck(interaction: discord.Interaction, item: str):
 
     try:
         rows = await fetch_sheet_data()
+    except PermissionError as e:
+        await interaction.followup.send(f"❌ Permission error: {e}")
+        return
+    except ValueError as e:
+        await interaction.followup.send(f"❌ Configuration error: {e}")
+        return
     except Exception as e:
         await interaction.followup.send(f"❌ Couldn't reach the price sheet: `{e}`")
         return
@@ -172,7 +213,7 @@ async def pricecheck(interaction: discord.Interaction, item: str):
     await interaction.followup.send(msg)
 
 
-@tree.command(name="pricecheckadd", description="Add a new item to the MnM price list. (Merchants only)")
+@tree.command(name="pricecheckadd", description="Add a new item to the MnM price list. (Merchant/Officers/GM only)")
 @app_commands.describe(
     item="The item name (e.g. Cool Item)",
     price="The price (e.g. 15 silver)",
@@ -180,26 +221,33 @@ async def pricecheck(interaction: discord.Interaction, item: str):
 )
 async def pricecheckadd(interaction: discord.Interaction, item: str, price: str, note: str = ""):
     item = item.strip().title()   # normalize to Title Case
-    # Role check — Merchants only
+
+    # Role + server check
     if not has_allowed_role(interaction):
         await interaction.response.send_message(
-            "❌ You need the **Merchants** role to add items to the price list.",
+            "❌ You need the **Merchant**, **Officers**, or **GM** role on the Bazaar Merchants server to add items.",
             ephemeral=True   # only the user sees this message
         )
         return
 
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=False)
 
     # Check if item already exists
     try:
         rows = await fetch_sheet_data()
+    except PermissionError as e:
+        await interaction.followup.send(f"❌ Permission error reading the sheet: {e}")
+        return
+    except ValueError as e:
+        await interaction.followup.send(f"❌ Configuration error: {e}")
+        return
     except Exception as e:
         await interaction.followup.send(f"❌ Couldn't reach the price sheet: `{e}`")
         return
 
     if find_item(rows, item) is not None:
         await interaction.followup.send(
-            f"⚠️ **{item.strip()}** already exists in the price list. "
+            f"⚠️ **{item}** already exists in the price list. "
             "If you need to update it, edit the sheet directly."
         )
         return
@@ -207,11 +255,17 @@ async def pricecheckadd(interaction: discord.Interaction, item: str, price: str,
     # Append the new row
     try:
         await append_row_to_sheet(item, price, note)
+    except PermissionError as e:
+        await interaction.followup.send(f"❌ Permission error writing to the sheet: {e}")
+        return
+    except ValueError as e:
+        await interaction.followup.send(f"❌ Configuration error: {e}")
+        return
     except Exception as e:
         await interaction.followup.send(f"❌ Failed to add item to the sheet: `{e}`")
         return
 
-    msg = f"✅ Added **{item.strip()}** — {price.strip()} (per stack)"
+    msg = f"✅ Added **{item}** — {price.strip()} (per stack)"
     if note:
         msg += f"\n📝 Note: {note.strip()}"
     await interaction.followup.send(msg)
@@ -231,7 +285,7 @@ if __name__ == "__main__":
         print("⚠️  Set your GOOGLE_API_KEY before running!")
     elif not GOOGLE_CREDENTIALS_JSON:
         print("⚠️  Set your GOOGLE_CREDENTIALS_JSON before running!")
+    elif not HOME_GUILD_ID:
+        print("⚠️  Set your HOME_GUILD_ID before running!")
     else:
         client.run(DISCORD_TOKEN)
-
-  
