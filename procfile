@@ -1,1 +1,1 @@
-worker: python pricecheck_bot.py
+start: python pricecheck_bot.py
