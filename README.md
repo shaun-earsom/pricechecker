@@ -1,6 +1,6 @@
 # PriceCheck Bot (MnM)
 
-A Discord bot that lets server members look up item prices from a Google Sheet using slash commands. Members with the **Merchants** role can also add new items directly from Discord.
+A Discord bot that lets server members look up item prices from a Google Sheet using slash commands. Members with the **Merchant**, **Officers**, or **GM** roles can add new items directly from Discord. The add command is restricted to the home guild only.
 
 ---
 
@@ -25,7 +25,7 @@ A Discord bot that lets server members look up item prices from a Google Sheet u
 ## Features
 
 - `/pricecheck` — Look up any item's price by name
-- `/pricecheckadd` — Add a new item to the price list (Merchants role required)
+- `/pricecheckadd` — Add a new item to the price list (Merchant, Officers, or GM role required — home server only)
 - Fuzzy/partial matching — suggests close results if an exact match isn't found
 - Automatic Title Case formatting on item names
 - Notes support — displays optional notes from Column C when present
@@ -92,6 +92,7 @@ Set these three variables wherever you run the bot:
 | `DISCORD_TOKEN` | Your Discord bot token |
 | `GOOGLE_API_KEY` | Your Google API key (read-only sheet access) |
 | `GOOGLE_CREDENTIALS_JSON` | Full contents of your service account JSON file (write access) |
+| `HOME_GUILD_ID` | Your Discord server ID — restricts `/pricecheckadd` to this server only |
 
 ### 5. Dependencies
 
@@ -124,7 +125,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 
 **On Railway (recommended for 24/7 hosting):**
 1. Upload all project files to Railway
-2. Set the three environment variables in the **Variables** tab
+2. Set the four environment variables in the **Variables** tab (`DISCORD_TOKEN`, `GOOGLE_API_KEY`, `GOOGLE_CREDENTIALS_JSON`, `HOME_GUILD_ID`)
 3. Set the start command to `python pricecheck_bot.py` in Railway's **Settings**
 4. Deploy — Railway will install dependencies automatically via `requirements.txt`
 
@@ -163,7 +164,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 • Shining Crystalized Magic — 40 silver
 ```
 
-### Add a new item (Merchants only)
+### Add a new item (Merchant, Officers, or GM only)
 ```
 /pricecheckadd item:Cool Item price:15 silver note:Optional note here
 ```
@@ -178,13 +179,14 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 ## Discord Permissions
 
 - `/pricecheck` — available to all server members (channel restrictions can be set via **Server Settings → Integrations**)
-- `/pricecheckadd` — restricted to members with the **Merchants** role; non-Merchants receive a private error message only they can see
+- `/pricecheckadd` — restricted to members with the **Merchant**, **Officers**, or **GM** role on the home server (Bazaar Merchants); users without an allowed role, or users on other servers, receive a private error message only they can see
 
 ---
 
 ## Notes
 
 - Item names are automatically formatted to Title Case regardless of how they are typed
+- To add or remove roles that can use `/pricecheckadd`, update the `ALLOWED_ROLES` set near the top of `pricecheck_bot.py`
 - New items added via `/pricecheckadd` are appended to the bottom of the sheet
 - To update or delete an existing item, edit the Google Sheet directly
 - Slash commands may take up to 1 hour to appear in Discord after first deployment
