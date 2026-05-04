@@ -4,6 +4,24 @@ A Discord bot that lets server members look up item prices from a Google Sheet u
 
 ---
 
+## Table of Contents
+
+- [Features](#features)
+- [Project Files](#project-files)
+- [Google Sheet Structure](#google-sheet-structure)
+- [Setup](#setup)
+  - [1. Discord Bot](#1-discord-bot)
+  - [2. Google API Key (for reads)](#2-google-api-key-for-reads)
+  - [3. Google Service Account (for writes)](#3-google-service-account-for-writes)
+  - [4. Environment Variables](#4-environment-variables)
+  - [5. Dependencies](#5-dependencies)
+- [Running the Bot](#running-the-bot)
+- [Usage](#usage)
+- [Discord Permissions](#discord-permissions)
+- [Notes](#notes)
+
+---
+
 ## Features
 
 - `/pricecheck` — Look up any item's price by name
