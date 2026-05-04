@@ -34,7 +34,7 @@ GOOGLE_CREDENTIALS_JSON  = os.getenv("GOOGLE_CREDENTIALS_JSON", "")
 SPREADSHEET_ID  = "1OswS9O6njNTfkzGNsKlhqbSMa0uzUY6HNsd1cPlWfqY"
 SHEET_RANGE     = "Sheet1!A2:C"       # Skip row 1 (headers), grab cols A-C
 SHEET_APPEND    = "Sheet1!A:C"        # Range used for appending new rows
-MERCHANTS_ROLE  = "merchant"          # Discord role name allowed to add items (case-insensitive)
+ALLOWED_ROLES   = {"merchant", "officers", "gm"}  # Roles allowed to use /pricecheckadd (case-insensitive)
 HOME_GUILD_ID   = int(os.getenv("HOME_GUILD_ID", "0"))  # Only this server can use /pricecheckadd
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -109,14 +109,14 @@ def find_item(rows: list[list[str]], query: str) -> tuple[str, str] | None:
     return None
 
 
-def has_merchants_role(interaction: discord.Interaction) -> bool:
-    """Returns True if the user is in the home guild AND has the merchant role."""
+def has_allowed_role(interaction: discord.Interaction) -> bool:
+    """Returns True if the user is in the home guild AND has an allowed role."""
     if not interaction.guild:
         return False  # DMs not allowed
     if HOME_GUILD_ID and interaction.guild.id != HOME_GUILD_ID:
         return False  # Wrong server
     return any(
-        role.name.lower() == MERCHANTS_ROLE.lower()
+        role.name.lower() in ALLOWED_ROLES
         for role in interaction.user.roles
     )
 
@@ -181,7 +181,7 @@ async def pricecheck(interaction: discord.Interaction, item: str):
 async def pricecheckadd(interaction: discord.Interaction, item: str, price: str, note: str = ""):
     item = item.strip().title()   # normalize to Title Case
     # Role check — Merchants only
-    if not has_merchants_role(interaction):
+    if not has_allowed_role(interaction):
         await interaction.response.send_message(
             "❌ You need the **Merchants** role to add items to the price list.",
             ephemeral=True   # only the user sees this message
