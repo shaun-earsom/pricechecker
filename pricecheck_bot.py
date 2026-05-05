@@ -17,6 +17,7 @@ Setup:
 Slash commands:
   /pricecheck item:Leather Scraps
   /pricecheckadd item:Cool Item price:15 silver note:Optional note here
+  /pricecheckedit item:Cool Item newprice:20 silver
 """
 
 import os
@@ -127,20 +128,69 @@ async def append_row_to_sheet(item: str, price: str, note: str) -> None:
             resp.raise_for_status()
 
 
-def find_item(rows: list[list[str]], query: str) -> tuple[str, str] | None:
+async def update_row_in_sheet(row_index: int, new_price: str, new_note: str | None = None) -> None:
+    """
+    Updates the price (Column B) of an existing row in the sheet.
+    If new_note is provided, also updates Column C.
+    If new_note is None, Column C is left untouched.
+    row_index is 0-based from the data rows (add 2 to account for header + 1-based sheets indexing).
+    Raises clear errors for common failure cases.
+    """
+    try:
+        token = await asyncio.to_thread(get_service_account_token)
+    except ValueError as e:
+        raise ValueError(str(e))
+
+    # +2 because row 1 is the header and Sheets rows are 1-based
+    sheet_row = row_index + 2
+
+    if new_note is not None:
+        # Update both price and note (B and C)
+        update_range = f"Sheet1!B{sheet_row}:C{sheet_row}"
+        payload = {"values": [[new_price.strip(), new_note.strip()]]}
+    else:
+        # Update price only (B)
+        update_range = f"Sheet1!B{sheet_row}"
+        payload = {"values": [[new_price.strip()]]}
+
+    url = (
+        f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}"
+        f"/values/{update_range}?valueInputOption=USER_ENTERED"
+    )
+
+    async with aiohttp.ClientSession() as session:
+        async with session.put(
+            url,
+            json=payload,
+            headers={"Authorization": f"Bearer {token}"}
+        ) as resp:
+            if resp.status == 403:
+                raise PermissionError(
+                    "The service account does not have Editor access to the sheet. "
+                    "Check that the sheet is shared with the service account email."
+                )
+            if resp.status == 404:
+                raise ValueError("Spreadsheet not found — check the SPREADSHEET_ID in the config.")
+            if resp.status == 401:
+                raise PermissionError("Google authentication failed — check your GOOGLE_CREDENTIALS_JSON.")
+            resp.raise_for_status()
+
+
+def find_item(rows: list[list[str]], query: str) -> tuple[int, str, str] | None:
     """
     Case-insensitive search for `query` in Column A.
-    Returns (price, note_or_empty) if found, or None if not found.
+    Returns (row_index, price, note_or_empty) if found, or None if not found.
+    row_index is 0-based from the data rows.
     """
     query_lower = query.strip().lower()
-    for row in rows:
+    for i, row in enumerate(rows):
         if not row:
             continue
         item_name = row[0].strip()
         if item_name.lower() == query_lower:
             price = row[1].strip() if len(row) > 1 else "N/A"
             note  = row[2].strip() if len(row) > 2 else ""
-            return price, note
+            return i, price, note
     return None
 
 
@@ -248,7 +298,7 @@ async def pricecheckadd(interaction: discord.Interaction, item: str, price: str,
     if find_item(rows, item) is not None:
         await interaction.followup.send(
             f"⚠️ **{item}** already exists in the price list. "
-            "If you need to update it, edit the sheet directly."
+            "Use /pricecheckedit to update its price instead."
         )
         return
 
@@ -271,6 +321,68 @@ async def pricecheckadd(interaction: discord.Interaction, item: str, price: str,
     await interaction.followup.send(msg)
 
 
+
+@tree.command(name="pricecheckedit", description="Edit the price (and optionally note) of an existing item. (Merchant/Officers/GM only)")
+@app_commands.describe(
+    item="The existing item name to update (e.g. Cool Item)",
+    newprice="The new price to set (e.g. 20 silver)",
+    note="Optional: update the note too. Leave blank to keep the existing note."
+)
+async def pricecheckedit(interaction: discord.Interaction, item: str, newprice: str, note: str = ""):
+    item = item.strip().title()   # normalize to Title Case
+
+    # Role + server check
+    if not has_allowed_role(interaction):
+        await interaction.response.send_message(
+            "❌ You need the **Merchant**, **Officers**, or **GM** role on the Bazaar Merchants server to edit prices.",
+            ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=False)
+
+    # Fetch sheet and find the item
+    try:
+        rows = await fetch_sheet_data()
+    except PermissionError as e:
+        await interaction.followup.send(f"❌ Permission error reading the sheet: {e}")
+        return
+    except ValueError as e:
+        await interaction.followup.send(f"❌ Configuration error: {e}")
+        return
+    except Exception as e:
+        await interaction.followup.send(f"❌ Couldn't reach the price sheet: `{e}`")
+        return
+
+    result = find_item(rows, item)
+    if result is None:
+        await interaction.followup.send(
+            f"❓ **{item}** was not found in the price list. "
+            "Check your spelling or use /pricecheckadd to add it as a new item."
+        )
+        return
+
+    row_index, old_price, old_note = result
+
+    # Update the price
+    try:
+        await update_row_in_sheet(row_index, newprice, note if note.strip() else None)
+    except PermissionError as e:
+        await interaction.followup.send(f"❌ Permission error writing to the sheet: {e}")
+        return
+    except ValueError as e:
+        await interaction.followup.send(f"❌ Configuration error: {e}")
+        return
+    except Exception as e:
+        await interaction.followup.send(f"❌ Failed to update item in the sheet: `{e}`")
+        return
+
+    msg = f"✏️ Updated **{item}** — ~~{old_price}~~ → {newprice.strip()} (per stack)"
+    if note:
+        msg += f"\n📝 Note: {note}"
+    await interaction.followup.send(msg)
+
+
 @client.event
 async def on_ready():
     await tree.sync()
@@ -289,3 +401,5 @@ if __name__ == "__main__":
         print("⚠️  Set your HOME_GUILD_ID before running!")
     else:
         client.run(DISCORD_TOKEN)
+
+  
