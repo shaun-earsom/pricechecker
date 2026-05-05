@@ -220,3 +220,4 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 - To delete an item, edit the Google Sheet directly
 - Slash commands may take up to 1 hour to appear in Discord after first deployment
 - Keep your `DISCORD_TOKEN` and service account JSON private — never commit them to a public repository
+- A read-only copy of the price data can be found [here](https://docs.google.com/spreadsheets/d/1OswS9O6njNTfkzGNsKlhqbSMa0uzUY6HNsd1cPlWfqY/edit?usp=sharing)
