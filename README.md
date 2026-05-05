@@ -18,7 +18,7 @@ A read-only copy of the price data can be found [here](https://docs.google.com/s
 
 - Fuzzy/partial matching — suggests close results if an exact match isn't found
 - Automatic Title Case formatting on item names
-- Automatic price formatting — currency words like `silver` and `gold` are converted to abbreviations e.g. `15s`, `1g 50s`
+- Automatic price formatting — currency words are converted to abbreviations on both display and write e.g. `15 silver` → `15s`, `50-60 silver` → `50-60s`, `1 gold 50 silver` → `1g 50s`
 - Notes support — displays optional notes from Column C when present on the same row
 - Duplicate protection — warns if an item already exists before adding it
 
@@ -208,4 +208,3 @@ Update price and note:
 - New items added via `/pricecheckadd` are appended to the bottom of the sheet
 - To update an item's price or note, use `/pricecheckedit` or edit the Google Sheet directly
 - To delete an item, edit the Google Sheet directly
-- Prices are automatically formatted to abbreviated currency on both display and write e.g. `15 silver` → `15s`, `50-60 silver` → `50-60s`, `1 gold 50 silver` → `1g 50s`
