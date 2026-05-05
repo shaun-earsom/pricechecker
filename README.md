@@ -1,6 +1,6 @@
 # PriceCheck Bot (MnM)
 
-A Discord bot that lets server members look up item prices from a Google Sheet using slash commands. Members with the **Merchant**, **Officers**, or **GM** roles can add new items directly from Discord. The add command is restricted to the home guild only.
+A Discord bot that lets server members look up item prices from a Google Sheet using slash commands. Members with the **Merchant**, **Officers**, or **GM** roles can add and edit items directly from Discord. Write commands are restricted to the home server only.
 
 ---
 
@@ -17,6 +17,11 @@ A Discord bot that lets server members look up item prices from a Google Sheet u
   - [5. Dependencies](#5-dependencies)
 - [Running the Bot](#running-the-bot)
 - [Usage](#usage)
+  - [Look up an item](#look-up-an-item)
+  - [Look up an item with a note](#look-up-an-item-with-a-note)
+  - [Partial match](#partial-match-typo-or-partial-name)
+  - [Add a new item](#add-a-new-item-merchant-officers-or-gm-only)
+  - [Edit an existing item](#edit-an-existing-item-merchant-officers-or-gm-only)
 - [Discord Permissions](#discord-permissions)
 - [Notes](#notes)
 
@@ -26,6 +31,7 @@ A Discord bot that lets server members look up item prices from a Google Sheet u
 
 - `/pricecheck` — Look up any item's price by name
 - `/pricecheckadd` — Add a new item to the price list (Merchant, Officers, or GM role required — home server only)
+- `/pricecheckedit` — Edit the price of an existing item, with an optional note update (Merchant, Officers, or GM role required — home server only)
 - Fuzzy/partial matching — suggests close results if an exact match isn't found
 - Automatic Title Case formatting on item names
 - Notes support — displays optional notes from Column C when present
@@ -92,7 +98,7 @@ Set these three variables wherever you run the bot:
 | `DISCORD_TOKEN` | Your Discord bot token |
 | `GOOGLE_API_KEY` | Your Google API key (read-only sheet access) |
 | `GOOGLE_CREDENTIALS_JSON` | Full contents of your service account JSON file (write access) |
-| `HOME_GUILD_ID` | Your Discord server ID — restricts `/pricecheckadd` to this server only |
+| `HOME_GUILD_ID` | Your Discord server ID — restricts `/pricecheckadd` and `/pricecheckedit` to this server only |
 
 ### 5. Dependencies
 
@@ -174,20 +180,43 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 📝 Note: Optional note here
 ```
 
+### Edit an existing item (Merchant, Officers, or GM only)
+
+**Update price only (note is preserved):**
+```
+/pricecheckedit item:Leather Scraps newprice:45 silver
+```
+**Response:**
+```
+✏️ Updated Leather Scraps — ~~50-60 silver~~ → 45 silver (per stack)
+```
+
+**Update price and note:**
+```
+/pricecheckedit item:Leather Scraps newprice:45 silver note:Price dropped after patch
+```
+**Response:**
+```
+✏️ Updated Leather Scraps — ~~50-60 silver~~ → 45 silver (per stack)
+📝 Note: Price dropped after patch
+```
+
 ---
 
 ## Discord Permissions
 
 - `/pricecheck` — available to all server members (channel restrictions can be set via **Server Settings → Integrations**)
 - `/pricecheckadd` — restricted to members with the **Merchant**, **Officers**, or **GM** role on the home server (Bazaar Merchants); users without an allowed role, or users on other servers, receive a private error message only they can see
+- `/pricecheckedit` — same role and server restrictions as `/pricecheckadd`
 
 ---
 
 ## Notes
 
 - Item names are automatically formatted to Title Case regardless of how they are typed
-- To add or remove roles that can use `/pricecheckadd`, update the `ALLOWED_ROLES` set near the top of `pricecheck_bot.py`
+- To add or remove roles that can use `/pricecheckadd` and `/pricecheckedit`, update the `ALLOWED_ROLES` set near the top of `pricecheck_bot.py`
 - New items added via `/pricecheckadd` are appended to the bottom of the sheet
-- To update or delete an existing item, edit the Google Sheet directly
+- To update an item's price or note, use `/pricecheckedit` or edit the Google Sheet directly
+- To delete an item, edit the Google Sheet directly
 - Slash commands may take up to 1 hour to appear in Discord after first deployment
 - Keep your `DISCORD_TOKEN` and service account JSON private — never commit them to a public repository
