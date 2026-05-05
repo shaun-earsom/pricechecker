@@ -21,6 +21,7 @@ Slash commands:
 """
 
 import os
+import re
 import json
 import asyncio
 import aiohttp
@@ -39,6 +40,38 @@ SHEET_RANGE     = "Sheet1!A2:C"       # Skip row 1 (headers), grab cols A-C
 SHEET_APPEND    = "Sheet1!A:C"        # Range used for appending new rows
 ALLOWED_ROLES   = {"merchant", "officers", "gm"}  # Roles allowed to use /pricecheckadd (case-insensitive)
 HOME_GUILD_ID   = int(os.getenv("HOME_GUILD_ID", "0"))  # Only this server can use /pricecheckadd
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+# ── Price formatting ──────────────────────────────────────────────────────────
+# Maps full currency words to their abbreviations
+CURRENCY_MAP = {
+    'copper':   'c',
+    'silver':   's',
+    'gold':     'g',
+    'platinum': 'p',
+    'plat':     'p',
+}
+
+def format_price(price: str) -> str:
+    """
+    Normalizes currency words in a price string to abbreviated form.
+    Examples:
+      '15 silver'    -> '15s'
+      '50-60 silver' -> '50-60s'
+      '1 gold 50 silver' -> '1g 50s'
+      '15 SILVER'    -> '15s'
+    Any unrecognized text is left as-is.
+    """
+    def replace_currency(match):
+        number = match.group(1)   # e.g. '50-60' or '15'
+        word   = match.group(2)   # e.g. 'silver'
+        abbrev = CURRENCY_MAP.get(word.lower(), word)
+        return f"{number}{abbrev}"
+
+    # Match a number (or range like 50-60) followed by optional space and a currency word
+    pattern = r'([\d][\d\-]*)\s*(copper|silver|gold|platinum|plat)'
+    return re.sub(pattern, replace_currency, price, flags=re.IGNORECASE).strip()
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -107,7 +140,7 @@ async def append_row_to_sheet(item: str, price: str, note: str) -> None:
         f"/values/{SHEET_APPEND}:append"
         f"?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS"
     )
-    row = [item.strip(), price.strip(), note.strip()]
+    row = [item.strip(), format_price(price), note.strip()]
     payload = {"values": [row]}
 
     async with aiohttp.ClientSession() as session:
@@ -256,7 +289,7 @@ async def pricecheck(interaction: discord.Interaction, item: str):
         return
 
     price, note = result
-    msg = f"💰 **{item.strip()}** — {price} (per stack)"
+    msg = f"💰 **{item.strip()}** — {format_price(price)} (per stack)"
     if note:
         msg += f"\n📝 Note: {note}"
 
@@ -315,7 +348,7 @@ async def pricecheckadd(interaction: discord.Interaction, item: str, price: str,
         await interaction.followup.send(f"❌ Failed to add item to the sheet: `{e}`")
         return
 
-    msg = f"✅ Added **{item}** — {price.strip()} (per stack)"
+    msg = f"✅ Added **{item}** — {format_price(price)} (per stack)"
     if note:
         msg += f"\n📝 Note: {note.strip()}"
     await interaction.followup.send(msg)
@@ -366,7 +399,7 @@ async def pricecheckedit(interaction: discord.Interaction, item: str, newprice: 
 
     # Update the price
     try:
-        await update_row_in_sheet(row_index, newprice, note if note.strip() else None)
+        await update_row_in_sheet(row_index, format_price(newprice), note if note.strip() else None)
     except PermissionError as e:
         await interaction.followup.send(f"❌ Permission error writing to the sheet: {e}")
         return
@@ -377,7 +410,7 @@ async def pricecheckedit(interaction: discord.Interaction, item: str, newprice: 
         await interaction.followup.send(f"❌ Failed to update item in the sheet: `{e}`")
         return
 
-    msg = f"✏️ Updated **{item}** — ~~{old_price}~~ → {newprice.strip()} (per stack)"
+    msg = f"✏️ Updated **{item}** — ~~{format_price(old_price)}~~ → {format_price(newprice)} (per stack)"
     if note:
         msg += f"\n📝 Note: {note}"
     await interaction.followup.send(msg)
