@@ -34,6 +34,7 @@ A Discord bot that lets server members look up item prices from a Google Sheet u
 - `/pricecheckedit` — Edit the price of an existing item, with an optional note update (Merchant, Officers, or GM role required — home server only)
 - Fuzzy/partial matching — suggests close results if an exact match isn't found
 - Automatic Title Case formatting on item names
+- Automatic price formatting — currency words (e.g. `silver`, `gold`) are converted to abbreviations (e.g. `15s`, `1g`)
 - Notes support — displays optional notes from Column C when present
 - Duplicate protection — warns if an item already exists before adding it
 
@@ -91,7 +92,7 @@ README.md           — This file
 
 ### 4. Environment Variables
 
-Set these three variables wherever you run the bot:
+Set these four variables wherever you run the bot:
 
 | Variable | Description |
 |---|---|
@@ -103,7 +104,7 @@ Set these three variables wherever you run the bot:
 ### 5. Dependencies
 
 ```bash
-pip install "discord.py>=2.3" aiohttp google-auth
+pip install "discord.py>=2.3" aiohttp google-auth requests
 ```
 
 Or install from `requirements.txt`:
@@ -145,7 +146,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 ```
 **Response:**
 ```
-💰 Leather Scraps — 50-60 silver (per stack)
+💰 Leather Scraps — 50-60s (per stack)
 ```
 
 ### Look up an item with a note
@@ -154,7 +155,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 ```
 **Response:**
 ```
-💰 Clouded Crystalized Magic — 15 silver (per stack)
+💰 Clouded Crystalized Magic — 15s (per stack)
 📝 Note: Currently 30s due to low supply and broken nodes
 ```
 
@@ -165,9 +166,9 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 **Response:**
 ```
 ❓ No exact match for Crystal. Did you mean one of these?
-• Clouded Crystalized Magic — 15 silver
-• Glinting Crystalized Magic — 25-30 silver
-• Shining Crystalized Magic — 40 silver
+• Clouded Crystalized Magic — 15s
+• Glinting Crystalized Magic — 25-30s
+• Shining Crystalized Magic — 40s
 ```
 
 ### Add a new item (Merchant, Officers, or GM only)
@@ -176,7 +177,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 ```
 **Response:**
 ```
-✅ Added Cool Item — 15 silver (per stack)
+✅ Added Cool Item — 15s (per stack)
 📝 Note: Optional note here
 ```
 
@@ -188,7 +189,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 ```
 **Response:**
 ```
-✏️ Updated Leather Scraps — ~~50-60 silver~~ → 45 silver (per stack)
+✏️ Updated Leather Scraps — ~~50-60s~~ → 45s (per stack)
 ```
 
 **Update price and note:**
@@ -197,7 +198,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 ```
 **Response:**
 ```
-✏️ Updated Leather Scraps — ~~50-60 silver~~ → 45 silver (per stack)
+✏️ Updated Leather Scraps — ~~50-60s~~ → 45s (per stack)
 📝 Note: Price dropped after patch
 ```
 
@@ -214,6 +215,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key GOOGLE_CREDENTIALS_JSON='{"
 ## Notes
 
 - Item names are automatically formatted to Title Case regardless of how they are typed
+- Prices are automatically formatted to abbreviated currency (e.g. `15 silver` → `15s`, `50-60 silver` → `50-60s`, `1 gold 50 silver` → `1g 50s`). This applies to both display and when writing to the sheet
 - To add or remove roles that can use `/pricecheckadd` and `/pricecheckedit`, update the `ALLOWED_ROLES` set near the top of `pricecheck_bot.py`
 - New items added via `/pricecheckadd` are appended to the bottom of the sheet
 - To update an item's price or note, use `/pricecheckedit` or edit the Google Sheet directly
