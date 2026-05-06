@@ -74,6 +74,74 @@ def format_price(price: str) -> str:
     return re.sub(pattern, replace_currency, price, flags=re.IGNORECASE).strip()
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Currency conversion constants (all values in copper)
+COPPER_VALUES = {
+    'c': 1,
+    's': 100,
+    'g': 10000,
+    'p': 1000000,
+}
+
+# Display order from largest to smallest
+CURRENCY_ORDER = [('p', 1000000), ('g', 10000), ('s', 100), ('c', 1)]
+
+STACK_SIZE = 20
+
+
+def price_to_copper(price: str) -> int | None:
+    """
+    Converts a formatted price string to total copper value.
+    Handles ranges by using the average (e.g. '50-60s' -> 55s -> 5500c).
+    Returns None if the price cannot be parsed.
+    Examples:
+      '15s'      -> 1500
+      '1g 50s'   -> 15000
+      '50-60s'   -> 5500  (average of range)
+    """
+    total_copper = 0
+    found_any = False
+
+    pattern = r'([\d]+)(?:-([\d]+))?\s*([csgp])'
+    for match in re.finditer(pattern, price, flags=re.IGNORECASE):
+        low  = int(match.group(1))
+        high = int(match.group(2)) if match.group(2) else low
+        avg  = (low + high) / 2
+        unit = match.group(3).lower()
+        total_copper += avg * COPPER_VALUES.get(unit, 0)
+        found_any = True
+
+    return int(total_copper) if found_any else None
+
+
+def copper_to_price(copper: int) -> str:
+    """
+    Converts a copper value back to a readable price string.
+    Examples:
+      1500    -> '15s'
+      15000   -> '1g 50s'
+      1000001 -> '1p 1c'
+    """
+    parts = []
+    remaining = copper
+    for symbol, value in CURRENCY_ORDER:
+        if remaining >= value:
+            amount = remaining // value
+            remaining = remaining % value
+            parts.append(f"{amount}{symbol}")
+    return ' '.join(parts) if parts else '0c'
+
+
+def stack_price(price: str, stack_size: int = STACK_SIZE) -> str | None:
+    """
+    Returns the formatted price for a full stack of stack_size units.
+    Returns None if the price cannot be parsed.
+    """
+    copper = price_to_copper(price)
+    if copper is None:
+        return None
+    return copper_to_price(copper * stack_size)
+
+
 
 def get_service_account_token() -> str:
     """
