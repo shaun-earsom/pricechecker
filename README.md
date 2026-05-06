@@ -21,6 +21,7 @@ A read-only copy of the price data can be found [here](https://docs.google.com/s
 - Automatic price formatting — currency words are converted to abbreviations on both display and write e.g. `15 silver` → `15s`, `50-60 silver` → `50-60s`, `1 gold 50 silver` → `1g 50s`
 - Notes support — displays optional notes from Column C when present on the same row
 - Duplicate protection — warns if an item already exists before adding it
+- Stack price calculation — displays the cost of a full stack alongside the unit price (stack of 20 for most items, stack of 1000 for any item containing "Arrow")
 
 ---
 
@@ -136,7 +137,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key HOME_GUILD_ID=your-server-i
 /pricecheck item:Leather Scraps
 ```
 ```
-💰 Leather Scraps — 50-60s
+💰 Leather Scraps — 50-60s (stack of 20: 11g)
 ```
 
 ### Look up an item with a note
@@ -145,7 +146,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key HOME_GUILD_ID=your-server-i
 /pricecheck item:Clouded Crystalized Magic
 ```
 ```
-💰 Clouded Crystalized Magic — 15s
+💰 Clouded Crystalized Magic — 15s (stack of 20: 3g)
 📝 Note: Currently 30s due to low supply and broken nodes
 ```
 
@@ -159,6 +160,15 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key HOME_GUILD_ID=your-server-i
 • Clouded Crystalized Magic — 15s
 • Glinting Crystalized Magic — 25-30s
 • Shining Crystalized Magic — 40s
+```
+
+### Look up an arrow item
+
+```
+/pricecheck item:Iron Arrow
+```
+```
+💰 Iron Arrow — 5c (stack of 1000: 50s)
 ```
 
 ### Add a new item *(Merchant, Officers, GM only)*
@@ -208,3 +218,4 @@ Update price and note:
 - New items added via `/pricecheckadd` are appended to the bottom of the sheet
 - To update an item's price or note, use `/pricecheckedit` or edit the Google Sheet directly
 - To delete an item, edit the Google Sheet directly
+- Stack size is 20 for most items and 1000 for any item with "Arrow" in the name. To change these values, update `STACK_SIZE` and `ARROW_STACK_SIZE` near the top of `pricecheck_bot.py`
