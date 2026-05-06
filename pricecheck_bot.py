@@ -289,7 +289,7 @@ async def pricecheck(interaction: discord.Interaction, item: str):
         return
 
     price, note = result
-    msg = f"💰 **{item.strip()}** — {format_price(price)} (per stack)"
+    msg = f"💰 **{item.strip()}** — {format_price(price)}"
     if note:
         msg += f"\n📝 Note: {note}"
 
@@ -348,7 +348,7 @@ async def pricecheckadd(interaction: discord.Interaction, item: str, price: str,
         await interaction.followup.send(f"❌ Failed to add item to the sheet: `{e}`")
         return
 
-    msg = f"✅ Added **{item}** — {format_price(price)} (per stack)"
+    msg = f"✅ Added **{item}** — {format_price(price)}"
     if note:
         msg += f"\n📝 Note: {note.strip()}"
     await interaction.followup.send(msg)
@@ -410,7 +410,7 @@ async def pricecheckedit(interaction: discord.Interaction, item: str, newprice: 
         await interaction.followup.send(f"❌ Failed to update item in the sheet: `{e}`")
         return
 
-    msg = f"✏️ Updated **{item}** — ~~{format_price(old_price)}~~ → {format_price(newprice)} (per stack)"
+    msg = f"✏️ Updated **{item}** — ~~{format_price(old_price)}~~ → {format_price(newprice)}"
     if note:
         msg += f"\n📝 Note: {note}"
     await interaction.followup.send(msg)
