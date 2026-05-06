@@ -16,7 +16,7 @@ A read-only copy of the price data can be found [here](https://docs.google.com/s
 
 ### Features
 
-- Fuzzy/partial matching — suggests close results if an exact match isn't found
+- Fuzzy/partial matching — intentionally use a partial name to search across multiple items at once (e.g. `/pricecheck crystallized` returns all matching items)
 - Automatic Title Case formatting on item names
 - Automatic price formatting — currency words are converted to abbreviations on both display and write e.g. `15 silver` → `15s`, `50-60 silver` → `50-60s`, `1 gold 50 silver` → `1g 50s`
 - Notes support — displays optional notes from Column C when present on the same row
@@ -150,16 +150,16 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key HOME_GUILD_ID=your-server-i
 📝 Note: Currently 30s due to low supply and broken nodes
 ```
 
-### Partial match
+### Partial/search match
 
 ```
 /pricecheck item:crystal
 ```
 ```
-❓ No exact match for Crystal. Did you mean one of these?
-• Clouded Crystalized Magic — 15s
-• Glinting Crystalized Magic — 25-30s
-• Shining Crystalized Magic — 40s
+🔍 Showing results for "Crystal":
+• Clouded Crystalized Magic — 15s (stack of 20: 3g)
+• Glinting Crystalized Magic — 25-30s (stack of 20: 11g)
+• Shining Crystalized Magic — 40s (stack of 20: 8g)
 ```
 
 ### Look up an arrow item
