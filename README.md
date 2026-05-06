@@ -39,7 +39,7 @@ The bot reads from a sheet with the following layout:
 
 | Column A | Column B          | Column C         |
 |----------|-------------------|------------------|
-| Item     | Price (in stacks) | Note (optional)  |
+| Item     | Price | Note (optional)  |
 
 Row 1 is the header row and is skipped automatically. Column C is optional and only displayed when a note is present on the same row as the queried item.
 
@@ -136,7 +136,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key HOME_GUILD_ID=your-server-i
 /pricecheck item:Leather Scraps
 ```
 ```
-💰 Leather Scraps — 50-60s (per stack)
+💰 Leather Scraps — 50-60s
 ```
 
 ### Look up an item with a note
@@ -145,7 +145,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key HOME_GUILD_ID=your-server-i
 /pricecheck item:Clouded Crystalized Magic
 ```
 ```
-💰 Clouded Crystalized Magic — 15s (per stack)
+💰 Clouded Crystalized Magic — 15s
 📝 Note: Currently 30s due to low supply and broken nodes
 ```
 
@@ -167,7 +167,7 @@ DISCORD_TOKEN=your-token GOOGLE_API_KEY=your-api-key HOME_GUILD_ID=your-server-i
 /pricecheckadd item:Cool Item price:15 silver note:Optional note here
 ```
 ```
-✅ Added Cool Item — 15s (per stack)
+✅ Added Cool Item — 15s
 📝 Note: Optional note here
 ```
 
@@ -179,7 +179,7 @@ Update price only — note is preserved:
 /pricecheckedit item:Leather Scraps newprice:45 silver
 ```
 ```
-✏️ Updated Leather Scraps — ~~50-60s~~ → 45s (per stack)
+✏️ Updated Leather Scraps — ~~50-60s~~ → 45s
 ```
 
 Update price and note:
@@ -188,7 +188,7 @@ Update price and note:
 /pricecheckedit item:Leather Scraps newprice:45 silver note:Price dropped after patch
 ```
 ```
-✏️ Updated Leather Scraps — ~~50-60s~~ → 45s (per stack)
+✏️ Updated Leather Scraps — ~~50-60s~~ → 45s
 📝 Note: Price dropped after patch
 ```
 
