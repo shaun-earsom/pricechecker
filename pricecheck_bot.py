@@ -40,7 +40,8 @@ SHEET_RANGE     = "Sheet1!A2:C"
 SHEET_APPEND    = "Sheet1!A:C"
 ALLOWED_ROLES   = {"merchant", "officers", "gm"}
 HOME_GUILD_ID   = int(os.getenv("HOME_GUILD_ID", "0"))
-STACK_SIZE      = 20
+STACK_SIZE       = 20
+ARROW_STACK_SIZE = 1000
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -276,7 +277,7 @@ async def pricecheck(interaction: discord.Interaction, item: str):
                 for name, price, note in close_matches
             )
             await interaction.followup.send(
-                f"❓ No exact match for **{item}**. Did you mean one of these?\n{lines}"
+                f"🔍 Showing results for **{item}**:\n{lines}"
             )
         else:
             await interaction.followup.send(
@@ -286,11 +287,12 @@ async def pricecheck(interaction: discord.Interaction, item: str):
         return
 
     _, price, note = result
-    formatted = format_price(price)
-    stack     = stack_price(formatted)
-    msg       = f"💰 **{item}** — {formatted}"
+    formatted  = format_price(price)
+    item_stack = ARROW_STACK_SIZE if "arrow" in item.lower() else STACK_SIZE
+    stack      = stack_price(formatted, item_stack)
+    msg        = f"💰 **{item}** — {formatted}"
     if stack:
-        msg += f" (stack of {STACK_SIZE}: {stack})"
+        msg += f" (stack of {item_stack}: {stack})"
     if note:
         msg += f"\n📝 Note: {note}"
     await interaction.followup.send(msg)
