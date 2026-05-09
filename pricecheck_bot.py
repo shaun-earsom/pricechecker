@@ -272,10 +272,17 @@ async def pricecheck(interaction: discord.Interaction, item: str):
             if row and item_lower in row[0].strip().lower()
         ]
         if close_matches:
-            lines = "\n".join(
-                f"• **{name}** — {format_price(price)}" + (f"  *(Note: {note})*" if note else "")
-                for name, price, note in close_matches
-            )
+            def match_line(name, price, note):
+                formatted   = format_price(price)
+                item_stack  = ARROW_STACK_SIZE if "arrow" in name.lower() else STACK_SIZE
+                stack       = stack_price(formatted, item_stack)
+                line        = f"• **{name}** — {formatted}"
+                if stack:
+                    line += f" (stack of {item_stack}: {stack})"
+                if note:
+                    line += f"  *(Note: {note})*"
+                return line
+            lines = "\n".join(match_line(name, price, note) for name, price, note in close_matches)
             await interaction.followup.send(
                 f"🔍 Showing results for **{item}**:\n{lines}"
             )
